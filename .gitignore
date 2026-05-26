@@ -1,0 +1,12 @@
+srs.md
+
+# frontend folder files 
+frontend/notes-ui/.npm-cache
+frontend/notes-ui/node_modules
+frontend/notes-ui/dist
+frontend/notes-ui/.vite
+frontend/notes-ui/logs
+
+# backend folder files 
+backend/notes-api/node_modules
+
