@@ -9,4 +9,6 @@ frontend/notes-ui/logs
 
 # backend folder files 
 backend/notes-api/node_modules
+backend/notes-api/BACKEND_EXPLANATION.md
+
 
