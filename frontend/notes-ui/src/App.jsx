@@ -4,7 +4,7 @@ import Sidebar from "./components/Sidebar.jsx";
 import NoteCard from "./components/NoteCard.jsx";
 import NoteEditor from "./components/NoteEditor.jsx";
 import ConfirmDialog from "./components/ConfirmDialog.jsx";
-import { loadNotes, saveNotes } from "./lib/storage.js";
+import { fetchNotes, createNoteOnServer, updateNoteOnServer, deleteNoteOnServer } from "./lib/storage.js";
 
 export default function App() {
   // --- States ---
@@ -26,20 +26,22 @@ export default function App() {
 
   // --- Load Initial Notes ---
   useEffect(() => {
-    const loadedNotes = loadNotes();
-    setNotes(loadedNotes);
-    if (loadedNotes.length > 0) {
-      setActiveNoteId(loadedNotes[0].id);
+    async function loadInitialData() {
+      setIsLoading(true);
+      try {
+        const loadedNotes = await fetchNotes();
+        setNotes(loadedNotes);
+        if (loadedNotes.length > 0) {
+          setActiveNoteId(loadedNotes[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to load notes initial state", err);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    setIsLoading(false);
+    loadInitialData();
   }, []);
-
-  // --- Save Notes to localStorage ---
-  useEffect(() => {
-    if (!isLoading) {
-      saveNotes(notes);
-    }
-  }, [notes, isLoading]);
 
   // --- Find Active Note ---
   const activeNote = useMemo(() => {
@@ -61,7 +63,7 @@ export default function App() {
     const q = searchQuery.toLowerCase().trim();
     if (q) {
       result = result.filter(
-        (n) =>
+         (n) =>
           (n.title || "").toLowerCase().includes(q) ||
           (n.content || "").toLowerCase().includes(q)
       );
@@ -78,30 +80,28 @@ export default function App() {
   }, [notes, selectedCategory, searchQuery]);
 
   // --- Add a New Note ---
-  const handleCreateNote = () => {
-    const now = Date.now();
-    const newNote = {
-      id: crypto.randomUUID?.() || String(now),
+  const handleCreateNote = async () => {
+    const newNoteData = {
       title: "Untitled Note",
       content: "",
       isPinned: false,
       tags: [],
-      createdAt: now,
-      updatedAt: now,
     };
 
-    setNotes((prev) => [newNote, ...prev]);
-    setActiveNoteId(newNote.id);
+    const savedNote = await createNoteOnServer(newNoteData);
+    setNotes((prev) => [savedNote, ...prev]);
+    setActiveNoteId(savedNote.id);
     setSelectedCategory("all"); // Reset category filter to view the new note
     setMobileView("editor"); // Auto-transition to editor on mobile view
   };
 
-  // --- Handle Real-time Editing (with Auto-save simulation) ---
+  // --- Handle Real-time Editing (with Auto-save API Sync) ---
   const handleNoteChange = (field, value) => {
     if (!activeNoteId) return;
 
     setSaveStatus("Saving...");
 
+    // Update local React state instantly for absolute fluid typing performance
     setNotes((prev) =>
       prev.map((n) =>
         n.id === activeNoteId
@@ -114,23 +114,31 @@ export default function App() {
       )
     );
 
-    // Debounce the autosave indicator status
+    // Debounce the actual backend API calls to reduce server load
     if (saveTimeout) clearTimeout(saveTimeout);
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(async () => {
+      await updateNoteOnServer(activeNoteId, { [field]: value });
       setSaveStatus("Saved");
     }, 600);
     setSaveTimeout(timeout);
   };
 
   // --- Toggle Pin Status ---
-  const handleTogglePin = (noteId) => {
+  const handleTogglePin = async (noteId) => {
+    const targetNote = notes.find((n) => n.id === noteId);
+    if (!targetNote) return;
+
+    const nextPinnedVal = !targetNote.isPinned;
+
     setNotes((prev) =>
       prev.map((n) =>
         n.id === noteId
-          ? { ...n, isPinned: !n.isPinned, updatedAt: Date.now() }
+          ? { ...n, isPinned: nextPinnedVal, updatedAt: Date.now() }
           : n
       )
     );
+
+    await updateNoteOnServer(noteId, { isPinned: nextPinnedVal });
   };
 
   // --- Delete Handlers ---
@@ -138,7 +146,7 @@ export default function App() {
     setDeleteConfirm({ isOpen: true, noteId });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     const id = deleteConfirm.noteId;
     if (id) {
       const updatedNotes = notes.filter((n) => n.id !== id);
@@ -149,6 +157,8 @@ export default function App() {
         setActiveNoteId(updatedNotes.length > 0 ? updatedNotes[0].id : null);
       }
       setMobileView("list"); // Return to list panel on mobile view
+
+      await deleteNoteOnServer(id);
     }
     setDeleteConfirm({ isOpen: false, noteId: null });
   };
