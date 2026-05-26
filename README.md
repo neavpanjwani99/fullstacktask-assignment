@@ -80,8 +80,40 @@ Make sure you have **Node.js** (v16 or higher) installed on your system.
 
 ---
 
+## 4. How to Run the Backend API
+
+### Prerequisites:
+*   **Node.js** (v16 or higher)
+*   **MongoDB Compass** (or MongoDB local community service running on port `27017`)
+
+### Steps to Run:
+
+1.  **Navigate to the Backend Directory**:
+    ```powershell
+    cd backend/notes-api
+    ```
+
+2.  **Install Dependencies**:
+    ```powershell
+    npm install
+    ```
+
+3.  **Start the API Server**:
+    *   For normal startup:
+        ```powershell
+        npm start
+        ```
+    *   For hot-reloading development startup:
+        ```powershell
+        npm run dev
+        ```
+    The server will startup on port `5000` (API endpoint: `http://localhost:5000/api/notes`).
+
+---
+
 ## Submission Details
 
 *   **Repository URL**: `https://github.com/neavpanjwani99/fullstacktask-assignment`
 *   **OS Environment**: Windows (PowerShell Shell)
-*   **Key Tech Stack**: React 18, Vite, Lucide-React, CSS3 Flex/Grid, Git
+*   **Key Tech Stack**: Node.js, Express, MongoDB (Mongoose), React 18, Vite, Lucide-React, CSS3 Flex/Grid, Git
+
